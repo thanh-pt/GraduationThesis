@@ -1,0 +1,30 @@
+<RCC>
+    <qresource prefix="/">
+        <file>pages/Information.qml</file>
+        <file>main.qml</file>
+        <file>unit/CircleControl.qml</file>
+        <file>unit/BlueToothConnection.qml</file>
+        <file>pages/Control.qml</file>
+        <file>unit/IconButton.qml</file>
+        <file>pages/Menu.qml</file>
+        <file>png/arrow.png</file>
+        <file>png/controls.png</file>
+        <file>png/info.png</file>
+        <file>png/menu.png</file>
+        <file>png/settings.png</file>
+        <file>png/switch_n.png</file>
+        <file>png/switch_s.png</file>
+        <file>png/control_app.png</file>
+        <file>unit/GridViewDelegate.qml</file>
+        <file>pages/Setting.qml</file>
+        <file>unit/ListViewDelegate.qml</file>
+        <file>png/bluetooth.png</file>
+        <file>png/filter.png</file>
+        <file>png/mpu6050.png</file>
+        <file>unit/GeneralImage.qml</file>
+        <file>pages/SettingBluetooth.qml</file>
+        <file>pages/SettingPID.qml</file>
+        <file>pages/SettingFilter.qml</file>
+        <file>pages/SettingSensor.qml</file>
+    </qresource>
+</RCC>
