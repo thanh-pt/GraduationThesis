@@ -23,11 +23,11 @@ I2C_HandleTypeDef hi2c1;
   *   MX_SDIO_SD_Init();
   *   MX_USART1_UART_Init();
   *   MX_FATFS_Init();
-	*   MPU6050_Initialize();
+  *   MPU6050_Initialize();
   *   while (1)
   *   {
-	*   	MPU6050_GetRawAccelTempGyro(MPU6050data);
-	*   	HAL_Delay(6);
+  *     MPU6050_GetRawAccelTempGyro(MPU6050data);
+  *     HAL_Delay(6);
   *   }
   *}
 */
@@ -40,13 +40,13 @@ I2C_HandleTypeDef hi2c1;
 */
 void MPU6050_I2C_Init(void)
 {
-	#ifdef FAST_I2C_MODE
-	#define I2C_SPEED_MODE 400000
-	#define I2C_DUTYCYCLE I2C_DUTYCYCLE_16_9
-	#else
-	#define I2C_SPEED_MODE 100000
-	#define I2C_DUTYCYCLE I2C_DUTYCYCLE_2
-	#endif
+  #ifdef FAST_I2C_MODE
+  #define I2C_SPEED_MODE 400000
+  #define I2C_DUTYCYCLE I2C_DUTYCYCLE_16_9
+  #else
+  #define I2C_SPEED_MODE 100000
+  #define I2C_DUTYCYCLE I2C_DUTYCYCLE_2
+  #endif
   hi2c1.Instance = I2C1;
   hi2c1.Init.ClockSpeed = I2C_SPEED_MODE;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE;
@@ -58,7 +58,7 @@ void MPU6050_I2C_Init(void)
   hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
   if (HAL_I2C_Init(&hi2c1) != HAL_OK)
   {
-		_Error_Handler(__FILE__, __LINE__);
+    _Error_Handler(__FILE__, __LINE__);
      // thoong bao loi len led 
   }
 
@@ -93,24 +93,24 @@ NT_MPU6050_Result_t MPU6050_Initialize(NT_MPU6050_Device_t DeviceNumber,NT_MPU60
     {
       Init_MPU6050.ACCEL_LSB_t= NT_MPU6050_ACCEL_LSB_16;
     }
-	MPU6050_I2C_Init();
+  MPU6050_I2C_Init();
 //MPU6050_SetClockSource(MPU6050_CLOCK_PLL_XGYRO);
 //MPU6050_SetFullScaleGyroRange(MPU6050_GYRO_FS_1000);
 //MPU6050_SetFullScaleAccelRange(MPU6050_ACCEL_FS_16);
 //MPU6050_SetSleepModeStatus(DISABLE);
   
-	MPU6050_setSleepDisabled();
-	HAL_Delay(10);
+  MPU6050_setSleepDisabled();
+  HAL_Delay(10);
 
-	MPU6050_WriteBits(Init_MPU6050.Device_t,MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_CLKSEL_BIT, MPU6050_PWR1_CLKSEL_LENGTH, MPU6050_CLOCK_PLL_XGYRO);
-	//set DLPF bandwidth to 42Hz
-	MPU6050_WriteBits(Init_MPU6050.Device_t, MPU6050_RA_CONFIG, MPU6050_CFG_DLPF_CFG_BIT, MPU6050_CFG_DLPF_CFG_LENGTH,MPU6050_DLPF_BW_256 ); //MPU6050_DLPF_BW_42);
+  MPU6050_WriteBits(Init_MPU6050.Device_t,MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_CLKSEL_BIT, MPU6050_PWR1_CLKSEL_LENGTH, MPU6050_CLOCK_PLL_XGYRO);
+  //set DLPF bandwidth to 42Hz
+  MPU6050_WriteBits(Init_MPU6050.Device_t, MPU6050_RA_CONFIG, MPU6050_CFG_DLPF_CFG_BIT, MPU6050_CFG_DLPF_CFG_LENGTH,MPU6050_DLPF_BW_256 ); //MPU6050_DLPF_BW_42);
     //set sampe rate
-	MPU6050_I2C_ByteWrite(Init_MPU6050.Device_t,MPU6050_RA_SMPLRT_DIV, 0x04); //1khz / (1 + 4) = 200Hz
-	//set gyro range
-	MPU6050_WriteBits(Init_MPU6050.Device_t,MPU6050_RA_GYRO_CONFIG, MPU6050_GCONFIG_FS_SEL_BIT, MPU6050_GCONFIG_FS_SEL_LENGTH, Init_MPU6050.Gyroscope_t);
-	//set accel range
-	MPU6050_WriteBits(Init_MPU6050.Device_t,MPU6050_RA_ACCEL_CONFIG, MPU6050_ACONFIG_AFS_SEL_BIT, MPU6050_ACONFIG_AFS_SEL_LENGTH,Init_MPU6050.Accelerometer_t);
+  MPU6050_I2C_ByteWrite(Init_MPU6050.Device_t,MPU6050_RA_SMPLRT_DIV, 0x04); //1khz / (1 + 4) = 200Hz
+  //set gyro range
+  MPU6050_WriteBits(Init_MPU6050.Device_t,MPU6050_RA_GYRO_CONFIG, MPU6050_GCONFIG_FS_SEL_BIT, MPU6050_GCONFIG_FS_SEL_LENGTH, Init_MPU6050.Gyroscope_t);
+  //set accel range
+  MPU6050_WriteBits(Init_MPU6050.Device_t,MPU6050_RA_ACCEL_CONFIG, MPU6050_ACONFIG_AFS_SEL_BIT, MPU6050_ACONFIG_AFS_SEL_LENGTH,Init_MPU6050.Accelerometer_t);
   return NT_MPU6050_Result_Ok;
 }
 
@@ -415,8 +415,8 @@ void MPU6050_ReadBit(uint8_t slaveAddr, uint8_t regAddr, uint8_t bitNum, uint8_t
 */
 void MPU6050_I2C_ByteWrite(uint8_t slaveAddr , uint8_t writeAddr, uint8_t pBuffer)
 {
-	//HAL_I2C_Master_Transmit(&I2C_MPU6050,0xD0,pBuffer,1,2000);
-	HAL_I2C_Mem_Write(&I2C_MPU6050,slaveAddr,writeAddr,I2C_MEMADD_SIZE_8BIT,& pBuffer,1,2000);
+  //HAL_I2C_Master_Transmit(&I2C_MPU6050,0xD0,pBuffer,1,2000);
+  HAL_I2C_Mem_Write(&I2C_MPU6050,slaveAddr,writeAddr,I2C_MEMADD_SIZE_8BIT,& pBuffer,1,2000);
 }
 
 /**
@@ -439,12 +439,12 @@ void MPU6050_I2C_BufferRead(uint8_t slaveAddr,uint8_t* pBuffer, uint8_t readAddr
  * set sleep disabled
  */
 void MPU6050_setSleepDisabled() {
-	MPU6050_WriteBit(Init_MPU6050.Device_t,MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_SLEEP_BIT, 0);
+  MPU6050_WriteBit(Init_MPU6050.Device_t,MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_SLEEP_BIT, 0);
 }
 
 /*
  * set sleep enabled
  */
 void MPU6050_setSleepEnabled() {
-	MPU6050_WriteBit(Init_MPU6050.Device_t, MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_SLEEP_BIT, 1);
+  MPU6050_WriteBit(Init_MPU6050.Device_t, MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_SLEEP_BIT, 1);
 }

@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+// Function of system
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
@@ -15,17 +16,20 @@ extern I2C_HandleTypeDef hi2c1;
 TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart1;
 
-DataMpu6050 MPU6050data;
-uint8_t MPU_OK = 0;
+// Bluetooth control value
 uint8_t receivedData[10] = "";
 uint8_t countData = 0;
 uint8_t sendData = 0;
 uint8_t receiveData = 0;
 uint8_t sentString[20];
-uint8_t speed = 0;
-volatile double gx=0;
-volatile double _angle = 0;
-volatile double e = 0;
+uint8_t dir = 0;
+// MPU6050 data value
+DataMpu6050 MPU6050data;
+double gx=0;
+double ax=0;
+double m_angle = 0;
+// PID controler value
+double e = 0;
 double integral = 0;
 double error_prior = 0;
 double iteration_time = 0.01;
@@ -35,71 +39,52 @@ float PID_bias = 0;
 float KP = 6;
 float KI = 30;
 float KD = 0.2;
-uint16_t t = 0;
-uint8_t x = 0;
+// Moto timer interupt
+uint8_t t_timer = 0;
+uint8_t t_on_time = 0;
 
 void SentData(double num){
-	sprintf(sentString,"%f",num);
-	sentString[19] = '\0';
-	HAL_UART_Transmit(&huart1,sentString,20,100);
-	HAL_UART_Transmit(&huart1," \n",2,100);
-	sentString[0] = '\0';
+  sprintf(sentString,"%f",num);
+  sentString[19] = '\0';
+  HAL_UART_Transmit(&huart1,sentString,20,100);
+  HAL_UART_Transmit(&huart1," \n",2,100);
+  sentString[0] = '\0';
 }
 
 int main(void)
 {
+  //System initialize
   HAL_Init();
   SystemClock_Config();
   MX_GPIO_Init();
   MX_USART1_UART_Init();
-	MX_TIM2_Init();
+  MX_TIM2_Init();
 
   /* USER CODE BEGIN 2 */
-	HAL_Delay(1000);
-	HAL_TIM_Base_Start_IT(&htim2);
-	HAL_UART_Receive_IT(&huart1,&receiveData,1);
   MPU6050_Initialize(NT_MPU6050_Device_AD0_LOW,NT_MPU6050_Accelerometer_2G,NT_MPU6050_Gyroscope_2000s);
-	HAL_Delay(1000);
-	MPU_OK = 1;
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_UART_Receive_IT(&huart1,&receiveData,1);
   while (1)
   {
-		MPU6050_GetRawAccelTempGyro(&MPU6050data);
-		MPU6050_convert(&MPU6050data);
-		gx = MPU6050data.NT_MPU6050_Gx;
-		_angle = _angle + gx*0.01;
-		_angle = Kalman(_angle,gx);
-	  integral += (_angle*iteration_time);
-	  derivative = (_angle - error_prior)/iteration_time;
-	  output = KP*_angle + KI*integral + KD*derivative + PID_bias;
-		x = (int)(output);
-	  error_prior = _angle;
-		SentData(_angle);
-		HAL_Delay(10);
-		if(_angle > 0){
-			RunM1();
-			RunM2();
-		}else{
-			BackM1();
-			BackM2();
-		}
-		/*
-		http://robotsforroboticists.com/pid-control/
-		error_prior = 0
-integral = 0
-KP = Some value you need to come up (see tuning section below)
-KI = Some value you need to come up (see tuning section below)
-KD = Some value you need to come up (see tuning section below)
-
-while(1) {
-    error = desired_value – actual_value
-    integral = integral + (error*iteration_time)
-    derivative = (error – error_prior)/iteration_time
-    output = KP*error + KI*integral + KD*derivative + bias
-    error_prior = error
-    sleep(iteration_time)
-}
-		
-		*/
+    //Getdata from MPU6050
+    MPU6050_GetRawAccelTempGyro(&MPU6050data);
+    MPU6050_convert(&MPU6050data);
+    gx = MPU6050data.NT_MPU6050_Gx;
+    ax = MPU6050data.NT_MPU6050_Ax
+    //Calculator angle
+    m_angle = m_angle + gx*iteration_time;
+    //Kalman Filter
+    m_angle = Kalman(m_angle,gx);
+    //Calculator ouput of PID
+    integral += (m_angle*iteration_time);
+    derivative = (m_angle - error_prior)/iteration_time;
+    output = KP*m_angle + KI*integral + KD*derivative + PID_bias;
+    t_on_time = (int)(output);
+    error_prior = m_angle;
+    //Control motor
+    MotoControl(m_angle, dir);
+    //Delay for next sample
+    HAL_Delay((int)iteration_time*1000);
   }
 }
 
@@ -221,35 +206,28 @@ static void MX_GPIO_Init(void){
 
 //Bluetooth received data to control
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	if (huart->Instance == huart1.Instance){
-		/*if (receiveData == 10)
-		{
-			receivedData[++countData] = receiveData;
-			HAL_UART_Transmit(&huart1,receivedData,7,1000);
-			countData = 0;
-		}
-		else
-		{
-			countData++;
-			receivedData[countData] = receiveData;
-		}*/
-		HAL_UART_Receive_IT(&huart1, &receiveData,1);
-	}
+  if (huart->Instance == huart1.Instance){
+    //Receive data
+    //Check end symbol
+      //When end symbol: Solve request
+        //Send back data such as angle, gx, ax,...
+        //Apply Setting data and send back answer OK or NOT
+    //Allow receive data again
+    HAL_UART_Receive_IT(&huart1, &receiveData,1);
+  }
 }
 //Timer interupt to define 0.001 second
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if(htim->Instance == htim2.Instance&&MPU_OK==1){
-		//interupt 0.001 second
-		if(t++ < x){
-			HAL_GPIO_WritePin(m1_ENPort,m1_ENPin,HighPin);
-			HAL_GPIO_WritePin(m2_ENPort,m2_ENPin,HighPin);
-		}
-		else{
-			HAL_GPIO_WritePin(m1_ENPort,m1_ENPin,LowPin);
-			HAL_GPIO_WritePin(m2_ENPort,m2_ENPin,LowPin);
-		}
-		if (t == 100) t = 0;
-	}
+  if(htim->Instance == htim2.Instance){
+    //interupt 0.001 second
+    if(t_timer++ < t_on_time){
+      EnableM();
+    }
+    else{
+      DisableM();
+    }
+    if (t_timer == 100) t_timer = 0;
+  }
 }
 
 //Some function I don't know

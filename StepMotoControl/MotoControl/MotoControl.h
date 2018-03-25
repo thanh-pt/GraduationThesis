@@ -35,5 +35,13 @@ void BackM2(void);
 void StopM1(void);
 void StopM2(void);
 void Run(void);
+void Back(void);
 void Stop(void);
+void EnableM1(void);
+void EnableM2(void);
+void EnableM(void);
+void DisableM1(void);
+void DisableM2(void);
+void DisableM(void);
+void MotoControl(uint8_t angle, uint8_t dir);
 #endif /* __MOTOCONTROL_H */
