@@ -11,8 +11,11 @@ public:
     ~UIBridge();
 public:
     Q_INVOKABLE void ChangeScreen(QString screenId);
+    Q_INVOKABLE void Info(QString info);
+//    Q_INVOKABLE void RequestDevice(cmd, parameter);
 signals:
     void eventChangeScreen(QString screenId);
+    void eventInfo(QString info);
 };
 
 #endif // UIBRIDGE_H

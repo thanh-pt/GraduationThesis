@@ -23,6 +23,7 @@ AppMain::~AppMain()
 void AppMain::Connection()
 {
     QObject::connect(m_uibridge, SIGNAL(eventChangeScreen(QString)),this,SLOT(onScreenChange(QString)));
+    QObject::connect(m_uibridge, SIGNAL(eventInfo(QString)),this,SLOT(onInfo(QString)));
 }
 
 void AppMain::onScreen()
@@ -37,5 +38,11 @@ void AppMain::onScreenChange(QString source)
 {
     qDebug() << "[AppMain][onScreenChange]source: " << source;
     mainLoader->setProperty("source",source);
+}
+
+void AppMain::onInfo(QString info)
+{
+    qDebug() << "[AppMain][onInfo]source: " << info;
+    obj->setProperty("infomation",info);
 }
 

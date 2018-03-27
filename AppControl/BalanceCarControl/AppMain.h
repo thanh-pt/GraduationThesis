@@ -29,6 +29,7 @@ public:
     void onScreen();
 public slots:
     void onScreenChange(QString source);
+    void onInfo(QString info);
 };
 
 #endif // APPMAIN_H

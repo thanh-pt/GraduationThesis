@@ -1,5 +1,3 @@
-//this is c code
-
 #include "MotoControl.h"
 
 void RunM1(void){
@@ -75,22 +73,17 @@ void DisableM(void){
 * angle:
 * dir <0: stand; 1: Go; 2: Back; 3: Left; 4: Right>
 */
-void MotoControl(uint8_t angle, uint8_t dir){
-  switch (dir){
-    case 0:
-    break;
-    case 1:
-    break;
-    case 2:
-    break;
-    case 3:
-    break;
-    case 4:
-    break;
-  }
-  if(angle > 0){
-      Run();
+void MotoControl(double m_ang, uint8_t dir){
+  if(m_ang > 0){
+      RunM1();
+      RunM2();
     }else{
-      Back();
+      BackM1();
+      BackM2();
     }
 }
+void InterruptMoto(bool isOn){
+  if (isOn) EnableM();
+  else DisableM();
+}
+

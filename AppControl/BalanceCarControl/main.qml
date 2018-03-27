@@ -4,6 +4,7 @@ import "unit"
 Item {
     id: root
     anchors.fill: parent
+    property string infomation
     focus: true
     Loader{
         id: mainloader
@@ -12,6 +13,36 @@ Item {
         anchors.bottom: parent.bottom
         property variant btModel: bluetooth_connection.btModel
         property variant btSocket: bluetooth_connection.btSocket
+    }
+    Rectangle{
+        id: infoView
+        width: root.width; height: root.height/5
+        anchors.bottom: parent.bottom
+        radius: height / 6
+        color: "#84817a"
+        opacity: 0.8
+        scale: 0.8
+        visible: false
+        Text {
+            id: info_text
+            anchors.centerIn: parent
+            color: "white"
+            text: infomation
+            onTextChanged: {
+                if (info_text.text != ""){
+                    infoView.visible = true
+                    info_timer_show.restart()
+                }
+            }
+        }
+        Timer{
+            id: info_timer_show
+            interval: 3000
+            onTriggered: {
+                infoView.visible = false
+                infomation = ""
+            }
+        }
     }
     Rectangle{
         id: top_bar

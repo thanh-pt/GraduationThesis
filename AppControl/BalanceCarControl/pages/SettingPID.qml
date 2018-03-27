@@ -5,7 +5,11 @@ Item {
     objectName: "S E T T I N G"
     property string previousScreen: "qrc:/pages/Setting.qml"
     Text{
-        text: "This page setting PID Controler"
+        text: btSocket.stringData;
         anchors.centerIn: root
+    }
+    MouseArea{
+        anchors.fill: parent
+        onClicked: btSocket.stringData = "0 12.3 22.12 2"
     }
 }

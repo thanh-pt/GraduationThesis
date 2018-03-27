@@ -4,7 +4,7 @@
 #ifdef __cplusplus
  extern "C" {
 #endif 
-	 
+
  /* Includes */
 #include<stdbool.h> 
 #include<stdint.h> 
@@ -44,5 +44,6 @@ void EnableM(void);
 void DisableM1(void);
 void DisableM2(void);
 void DisableM(void);
-void MotoControl(uint8_t angle, uint8_t dir);
+void MotoControl(double m_ang, uint8_t dir);
+void InterruptMoto(bool isOn);
 #endif /* __MOTOCONTROL_H */

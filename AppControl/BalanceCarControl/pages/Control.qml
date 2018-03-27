@@ -6,25 +6,50 @@ Item {
     id: root
     objectName: "C O N T R O L"
     property string previousScreen: "qrc:/pages/Menu.qml"
+
+    property string rawData: btSocket.stringData
+
     property real maxY: 0.0
     property real minY: 0.0
     property real plotLengh: 5
-    property real lx: 0.0
-    property real ly: 0.0
+
+    property real x_time: 0.0
+    property real y_angle: 0.0
+    property real y_velocity: 0.0
+    property real y_acceleration: 0.0
+
     ChartView{
+        id: chart_view_area
         width: root.width; height: root.height * 3 / 5 * 0.8
         anchors.top: root.top
         anchors.topMargin: 50
-        LineSeries{
-            id: dataline2
-            name: "Test 2"
-            axisY: dataline.axisY
-            axisX: dataline.axisX
+        function updateNewRange(){
+            xRange.min = x_time - plotLengh
+            xRange.max = x_time
+            // update max y
+            maxY = (maxY < y_angle) ? y_angle : maxY
+            maxY = (maxY < y_velocity) ? y_velocity : maxY
+            maxY = (maxY < y_acceleration) ? y_acceleration : maxY
+            // update min y
+            minY = (minY > y_angle) ? y_angle : minY
+            minY = (minY > y_velocity) ? y_velocity : minY
+            minY = (minY > y_acceleration) ? y_acceleration : minY
         }
-
+        LineSeries{
+            id: line_acceleration
+            name: "Acceleration"
+            axisY: line_angle.axisY
+            axisX: line_angle.axisX
+        }
+        LineSeries{
+            id: line_velocity
+            name: "Velocity"
+            axisY: line_angle.axisY
+            axisX: line_angle.axisX
+        }
         LineSeries {
-            id: dataline
-            name: "LineSeries"
+            id: line_angle
+            name: "Angle"
             axisY: CategoryAxis{
                 min: minY; max: maxY
                 CategoryRange {
@@ -45,22 +70,31 @@ Item {
             }
         }
     }
+
+    onRawDataChanged: {
+        if (rawData != ""){
+            //console.log(rawData);
+            x_time += 0.1;
+            var Data = rawData.split(" ");
+            y_angle = parseFloat(Data[0]);
+            y_velocity = parseFloat(Data[1]);
+            y_acceleration = parseFloat(Data[2]);
+            //New range
+            chart_view_area.updateNewRange()
+            //Append new data
+            line_angle.append(x_time, y_angle)
+            line_velocity.append(x_time, y_velocity)
+            line_acceleration.append(x_time, y_acceleration)
+            request_data.restart()
+        }
+    }
+
     Timer{
-        id: adding_data
+        id: request_data
         interval: 100
         running: true
-        repeat: true
         onTriggered: {
-            lx += 0.1;
-            ly=parseFloat(btSocket.stringData);
-            xRange.min = lx - plotLengh
-            xRange.max = lx
-            if (ly > maxY) maxY = ly
-            if (ly < minY) minY = ly
-            if (-ly + 0.3 > maxY) maxY = -ly + 0.3
-            if (-ly + 0.3 < minY) minY = -ly + 0.3
-            dataline2.append(lx,-ly + 0.3)
-            dataline.append(lx,ly)
+            btSocket.stringData = "1"
         }
     }
     Item{

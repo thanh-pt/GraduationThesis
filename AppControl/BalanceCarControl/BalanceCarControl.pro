@@ -20,7 +20,7 @@ QML_IMPORT_PATH =
 HEADERS += \
     UIBridge.h \
     AppMain.h \
-    screendefine.h \
+    screendefine.h
 
 DISTFILES += \
     android/AndroidManifest.xml \

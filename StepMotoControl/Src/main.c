@@ -1,29 +1,31 @@
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "MPU6050.h"
 #include "kalman.h"
 #include "MotoControl.h"
-#include <math.h>
-#include <stdlib.h>
 
-/* Private variables ---------------------------------------------------------*/
+// System varible
 extern I2C_HandleTypeDef hi2c1;
-
 TIM_HandleTypeDef htim2;
-
 UART_HandleTypeDef huart1;
 
+/*User varible*/
 // Bluetooth control value
-uint8_t receivedData[10] = "";
-uint8_t countData = 0;
-uint8_t sendData = 0;
+uint8_t bufferData[10] = "";
+uint8_t dataIndex = 0;
 uint8_t receiveData = 0;
-uint8_t sentString[20];
+char* sentData;
+char tempString[20];
+char sentString[30];
 uint8_t dir = 0;
 // MPU6050 data value
 DataMpu6050 MPU6050data;
-double gx=0;
-double ax=0;
+bool byVelocity = true;
+double gx = 0;
+double ax = 0;
 double m_angle = 0;
 // PID controler value
 double e = 0;
@@ -33,9 +35,9 @@ double iteration_time = 0.01;
 double derivative = 0;
 double output = 0;
 float PID_bias = 0;
-float KP = 6;
-float KI = 30;
-float KD = 0.2;
+float KP = 55;//6;
+float KI = 55;//30;
+float KD = 55;//0.2;
 // Moto timer interupt
 uint8_t t_timer = 0;
 uint8_t t_on_time = 0;
@@ -45,14 +47,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
-
-void SentData(double num){
-  sprintf(sentString,"%f",num);
-  sentString[19] = '\0';
-  HAL_UART_Transmit(&huart1,sentString,20,100);
-  HAL_UART_Transmit(&huart1," \n",2,100);
-  sentString[0] = '\0';
-}
 
 int main(void)
 {
@@ -77,6 +71,7 @@ int main(void)
     gx = MPU6050data.NT_MPU6050_Gx;
     ax = MPU6050data.NT_MPU6050_Ax;
     //Calculator angle
+    //TODO: Write function get m_angle from by velocity or acceleration
     m_angle = m_angle + gx*iteration_time;
     //Kalman Filter
     m_angle = Kalman(m_angle,gx);
@@ -86,6 +81,16 @@ int main(void)
     output = KP*m_angle + KI*integral + KD*derivative + PID_bias;
     t_on_time = (int)(output);
     error_prior = m_angle;
+    //Test sent data
+//    sprintf(sentString,"%.2f",m_angle);
+//    strcat(sentString," ");
+//    sprintf(tempString,"%.2f",gx);
+//    strcat(sentString,tempString);
+//    strcat(sentString," ");
+//    sprintf(tempString,"%.2f",ax);
+//    strcat(sentString,tempString);
+//    strcat(sentString,"\n");
+//    HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),500);
     //Control motor
     MotoControl(m_angle, dir);
     //Delay for next sample
@@ -146,9 +151,9 @@ static void MX_TIM2_Init(void){
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 899;
+  htim2.Init.Prescaler = 89;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 799;
+  htim2.Init.Period = 79;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -212,6 +217,66 @@ static void MX_GPIO_Init(void){
 //Bluetooth received data to control
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
   if (huart->Instance == huart1.Instance){
+    if (receiveData == '\n'){
+      /*
+      * 0 : check OK function
+      * 1 : request angle
+      */
+      switch (bufferData[0]){
+        case '0':
+//          sentData = "OK\n";
+//          HAL_UART_Transmit(&huart1,(uint8_t*)sentData,strlen(sentData),1000);
+          //test
+          char temp[6] = "";
+          uint8_t idx = 0;
+          uint8_t i = 2;
+          float num = 0;
+          while(i <= dataIndex){
+            char ch = bufferData[i++];
+            if (ch != ' ') temp[idx++] = ch;
+            else{
+              temp[idx] = '\0';
+              if (num == 0.0){
+                num = atof(temp);
+              }
+              else{
+                KI = atof(temp);
+              }
+              idx = 0;
+            }
+          }
+          KP = num;
+          KD = atof(temp);
+          sprintf(sentString,"%.2f",KP);
+          strcat(sentString," ");
+          sprintf(tempString,"%.2f",KI);
+          strcat(sentString,tempString);
+          strcat(sentString," ");
+          sprintf(tempString,"%.2f",KD);
+          strcat(sentString,tempString);
+          strcat(sentString,"\n");
+          HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),500);
+          break;
+        case '1':
+          sprintf(sentString,"%.2f",m_angle);
+          strcat(sentString," ");
+          sprintf(tempString,"%.2f",gx);
+          strcat(sentString,tempString);
+          strcat(sentString," ");
+          sprintf(tempString,"%.2f",ax);
+          strcat(sentString,tempString);
+          strcat(sentString,"\n");
+          HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),500);
+          break;
+        case '2':
+          break;
+      }
+      dataIndex = 0;
+    }
+    else{
+      // Add new character to list
+      bufferData[dataIndex++] = receiveData;
+    }
     //Receive data
     //Check end symbol
       //When end symbol: Solve request
@@ -225,12 +290,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
   if(htim->Instance == htim2.Instance){
     //interupt 0.001 second
-    if(t_timer++ < t_on_time){
-      EnableM();
-    }
-    else{
-      DisableM();
-    }
+    InterruptMoto(t_on_time - t_timer > 0);
     if (t_timer == 100) t_timer = 0;
   }
 }
