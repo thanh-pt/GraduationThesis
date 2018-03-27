@@ -75,6 +75,5 @@ AppControl/build-BalanceCarControl-Android_for_armeabi_v7a_GCC_4_9_Qt_5_10_0_for
 # -----------------
 #---StepMotoControl
 *.uvguix.*
-/StepMotoControl/MDK-ARM/StepMotoControl/List/
-/StepMotoControl/MDK-ARM/StepMotoControl/Obj/
+/StepMotoControl/MDK-ARM/StepMotoControl/
 *.uvoptx

@@ -373,11 +373,14 @@
 #define MPU6050_GYRO_LSB_1000 32.8
 #define MPU6050_GYRO_LSB_2000 16.4
 
-#define MPU6050_GXOFFSET 0
+#define MPU6050_GXOFFSET 11.11
 #define MPU6050_GYOFFSET -26
 #define MPU6050_GZOFFSET -13
 
+
+
 //enum
+
 typedef enum {
 	NT_MPU6050_Device_AD0_LOW = 0xD0,   /*!< AD0 pin is set to low */
 	NT_MPU6050_Device_AD0_HIGH = 0x69  /*!< AD0 pin is set to high */
@@ -441,6 +444,7 @@ typedef struct {
   NT_MPU6050_ACCEL_LSB_t  ACCEL_LSB_t;
 }InitMPU6050;
 
+
 NT_MPU6050_Result_t MPU6050_Initialize(NT_MPU6050_Device_t DeviceNumber,NT_MPU6050_Accelerometer_t AccelerometerSensitivity , NT_MPU6050_Gyroscope_t GyroscopeSensitivity) ;
 bool MPU6050_TestConnection(void);
 
@@ -461,6 +465,7 @@ unsigned char MPU6050_GetDeviceID(void);
 void MPU6050_GetRawAccelTempGyro(DataMpu6050 * dataMPU6050);
 void MPU6050_convert(DataMpu6050 * dataMPU6050);
 
+
 void MPU6050_WriteBits(uint8_t slaveAddr, uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data);
 void MPU6050_WriteBit(uint8_t slaveAddr, uint8_t regAddr, uint8_t bitNum, uint8_t data);
 void MPU6050_ReadBits(uint8_t slaveAddr, uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t *data); 
@@ -470,7 +475,10 @@ void MPU6050_I2C_Init(void);
 void MPU6050_I2C_ByteWrite(uint8_t slaveAddr, uint8_t writeAddr, uint8_t pBuffer);
 void MPU6050_I2C_BufferRead(uint8_t slaveAddr,uint8_t* pBuffer, uint8_t readAddr, uint16_t NumByteToRead);
 
+
 void MPU6050_setSleepDisabled(void);
 void MPU6050_setSleepEnabled(void);
+
+
 
 #endif /* __MPU6050_H */

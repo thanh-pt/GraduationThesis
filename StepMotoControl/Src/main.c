@@ -6,14 +6,11 @@
 #include <math.h>
 #include <stdlib.h>
 
-// Function of system
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_TIM2_Init(void);
-
+/* Private variables ---------------------------------------------------------*/
 extern I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart1;
 
 // Bluetooth control value
@@ -43,6 +40,12 @@ float KD = 0.2;
 uint8_t t_timer = 0;
 uint8_t t_on_time = 0;
 
+// Function of system
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_TIM2_Init(void);
+
 void SentData(double num){
   sprintf(sentString,"%f",num);
   sentString[19] = '\0';
@@ -56,21 +59,23 @@ int main(void)
   //System initialize
   HAL_Init();
   SystemClock_Config();
+  MX_TIM2_Init();
   MX_GPIO_Init();
   MX_USART1_UART_Init();
-  MX_TIM2_Init();
 
   /* USER CODE BEGIN 2 */
-  MPU6050_Initialize(NT_MPU6050_Device_AD0_LOW,NT_MPU6050_Accelerometer_2G,NT_MPU6050_Gyroscope_2000s);
+  HAL_Delay(1000);
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_UART_Receive_IT(&huart1,&receiveData,1);
+  MPU6050_Initialize(NT_MPU6050_Device_AD0_LOW,NT_MPU6050_Accelerometer_2G,NT_MPU6050_Gyroscope_2000s);
+  HAL_Delay(1000);
   while (1)
   {
     //Getdata from MPU6050
     MPU6050_GetRawAccelTempGyro(&MPU6050data);
     MPU6050_convert(&MPU6050data);
     gx = MPU6050data.NT_MPU6050_Gx;
-    ax = MPU6050data.NT_MPU6050_Ax
+    ax = MPU6050data.NT_MPU6050_Ax;
     //Calculator angle
     m_angle = m_angle + gx*iteration_time;
     //Kalman Filter
@@ -141,9 +146,9 @@ static void MX_TIM2_Init(void){
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 89;
+  htim2.Init.Prescaler = 899;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 79;
+  htim2.Init.Period = 799;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)

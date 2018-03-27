@@ -1,9 +1,10 @@
-#ifndef __MOTOCONTROL_H_
-#define __MOTOCONTROL_H_
+#ifndef _MOTOCONTROL_H_
+#define _MOTOCONTROL_H_
 
-//#ifdef __cplusplus
-// extern "C" {
-//#endif 
+#ifdef __cplusplus
+ extern "C" {
+#endif 
+	 
  /* Includes */
 #include<stdbool.h> 
 #include<stdint.h> 
