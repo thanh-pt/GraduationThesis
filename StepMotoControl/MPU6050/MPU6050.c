@@ -2,10 +2,6 @@
 #include "MPU6050.h"
 #include "stdint.h"
 //#include "stm32f10x_i2c.h"
-
-
-
-
 /** @defgroup MPU6050_Library
 * @{
 */

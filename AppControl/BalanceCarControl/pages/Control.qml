@@ -7,6 +7,7 @@ Item {
     objectName: "C O N T R O L"
     property string previousScreen: "qrc:/pages/Menu.qml"
 
+    property string dirControl: "0"
     property string rawData: btSocket.stringData
 
     property real maxY: 0.0
@@ -94,17 +95,24 @@ Item {
         interval: 100
         running: true
         onTriggered: {
-            btSocket.stringData = "1"
+            btSocket.stringData = dirControl
         }
     }
     Item{
         width: root.width; height: root.height * 2 / 5
         anchors.bottom: root.bottom
         anchors.bottomMargin: 30
+
         CircleControl{
             width: parent.width * 3 / 5
             height: width
             anchors.centerIn: parent
+            MouseArea{
+                anchors.fill: parent
+                onPressed: dirControl = "1"
+                onReleased: dirControl = "0"
+                onCanceled: dirControl = "0"
+            }
         }
     }
 }

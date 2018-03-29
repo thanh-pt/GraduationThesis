@@ -74,7 +74,19 @@ void DisableM(void){
 * dir <0: stand; 1: Go; 2: Back; 3: Left; 4: Right>
 */
 void MotoControl(double m_ang, uint8_t dir){
-  if(m_ang > 0){
+  double controlAngle;
+  switch (dir){
+    case 0:
+      controlAngle = 0;
+    break;
+    case 1:
+      controlAngle = 0.5;
+    break;
+    case 2:
+      controlAngle = -0.5;
+    break;
+  }
+  if(m_ang > controlAngle){
       RunM1();
       RunM2();
     }else{
