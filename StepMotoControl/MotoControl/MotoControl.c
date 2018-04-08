@@ -53,8 +53,10 @@ void EnableM2(void){
 }
 
 void EnableM(void){
-  EnableM1();
-  EnableM2();
+  HAL_GPIO_WritePin(m1_ENPort,m1_ENPin,HighPin);
+	HAL_GPIO_WritePin(m2_ENPort,m2_ENPin,HighPin);
+  //EnableM1();
+  //EnableM2();
 }
 
 void DisableM1(void){
@@ -66,8 +68,10 @@ void DisableM2(void){
 }
 
 void DisableM(void){
-  DisableM1();
-  DisableM2();
+	HAL_GPIO_WritePin(m1_ENPort,m1_ENPin,LowPin);
+	HAL_GPIO_WritePin(m2_ENPort,m2_ENPin,LowPin);
+  //DisableM1();
+  //DisableM2();
 }
 /*
 * angle:
@@ -95,7 +99,13 @@ void MotoControl(double m_ang, uint8_t dir){
     }
 }
 void InterruptMoto(bool isOn){
-  if (isOn) EnableM();
-  else DisableM();
+  if (isOn) {
+		HAL_GPIO_WritePin(m1_ENPort,m1_ENPin,HighPin);
+		HAL_GPIO_WritePin(m2_ENPort,m2_ENPin,HighPin);
+	}
+  else {
+		HAL_GPIO_WritePin(m1_ENPort,m1_ENPin,LowPin);
+		HAL_GPIO_WritePin(m2_ENPort,m2_ENPin,LowPin);
+	}
 }
 

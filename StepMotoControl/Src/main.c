@@ -34,12 +34,12 @@ double iteration_time = 0.01;
 double derivative = 0;
 double output = 0;
 float PID_bias = 0;
-// PID value
-float KP = 6;
-float KI = 30;
-float KD = 0.2;
+// PID value 6_30_0.2
+double KP = 6;
+double KI = 120;
+double KD = 0.1;
 // Moto timer interupt
-uint8_t t_timer = 0;
+uint16_t t_timer = 0;
 uint8_t t_on_time = 0;
 
 // Function of system
@@ -66,7 +66,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_UART_Receive_IT(&huart1,&receiveData,1);
   MPU6050_Initialize(NT_MPU6050_Device_AD0_LOW,NT_MPU6050_Accelerometer_2G,NT_MPU6050_Gyroscope_2000s);
-  HAL_Delay(1000);
+  HAL_Delay(2000);
 
   while (1)
   {
@@ -250,8 +250,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
   if(htim->Instance == htim2.Instance){
     //interupt 0.001 second
-    InterruptMoto(t_on_time - t_timer > 0);
-    if (t_timer == 100) t_timer = 0;
+    if (t_timer++ > 100) t_timer = 0;
+    //if (m_angle < 60){
+			InterruptMoto(t_timer < t_on_time);
+		//}
+		//else{
+			//InterruptMoto(false);
+		//}
   }
 }
 

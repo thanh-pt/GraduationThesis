@@ -79,5 +79,6 @@ AppControl/build-BalanceCarControl-Android_for_armeabi_v7a_GCC_4_9_Qt_5_10_0_for
 *.uvoptx
 *.TMP
 #Circuit Design
+/CircuitDesign/__Previews/
 /CircuitDesign/History/
 /CircuitDesign/Project Logs for BalanceCarCircuit/
