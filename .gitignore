@@ -71,6 +71,7 @@ Thumbs.db
 *.exe
 AppControl/BuiltOutput/
 AppControl/build-BalanceCarControl-Android_for_armeabi_v7a_GCC_4_9_Qt_5_10_0_for_Android_armv7-Release/
+AppControl/BuildOut/
 #---End of AppControl ignore
 # -----------------
 #---StepMotoControl
