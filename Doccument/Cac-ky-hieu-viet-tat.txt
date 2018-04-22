@@ -10,7 +10,7 @@ APB
 PWM
 USB
 CAN
-
+RPM
 
 // tài liệu tham khảo
 http://theembeddedguy.com/2016/05/23/8-bit-and-32-bit-microcontrollers/
