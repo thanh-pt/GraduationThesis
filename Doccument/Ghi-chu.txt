@@ -1,0 +1,48 @@
+Các ký hiệu viết tắt
+DMP Digital Motion Processor
+ADC Analog Digital Converter
+DAC
+dps degree per second
+FIFO First in first out
+CMOS 
+MEMS
+APB
+PWM
+USB
+CAN
+RPM
+
+// tài liệu tham khảo
+http://theembeddedguy.com/2016/05/23/8-bit-and-32-bit-microcontrollers/
+
+// các công việc phải làm
+1. Hoàn thành tài liệu khóa luận
+<Update lý thuyết theo các chỉ mục>
+MPU6050
+	Đường truyền I2c
+	Thiết lập trong dự án
+PWM
+	là gì?
+	L293
+PID
+	là gì?
+	PID trong đồ án
+[Qt]
+Giới thiệu
+	Đa nền tảng
+	Qt java
+	Khả năng nhúng
+QML
+	javascript
+	đễ sử dụng, ví dụ
+C++ QML
+	C++ mạnh mẽ, hướng đối tượng
+	signal slot
+[Kết luận]
+
+2. Hoàn thành sản phẩm khóa luận
+- Đọc MPU6050
+- Điều khiển DC
+	điều khiển đầu ra I/O
+	kết nối L293
+- apply PID + test
