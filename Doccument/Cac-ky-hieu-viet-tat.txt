@@ -1,0 +1,16 @@
+Các ký hiệu viết tắt
+DMP Digital Motion Processor
+ADC Analog Digital Converter
+DAC
+dps degree per second
+FIFO First in first out
+CMOS 
+MEMS
+APB
+PWM
+USB
+CAN
+
+
+// tài liệu tham khảo
+http://theembeddedguy.com/2016/05/23/8-bit-and-32-bit-microcontrollers/
