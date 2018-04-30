@@ -5,22 +5,20 @@
 *           PB6         SCL
 *           PB7         SDA
 *           PAB         INT
-*
 *   - user UART 
 *         TX     PA9
 *         RX     PA10
-*   
 */
 
-/* Includes ------------------------------------------------------------------*/
+/* Includes */
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "MPU6050.h"
 #include "MPU6050_dmp_6axis_MotionApps20.h"
 
 /*System values*/
+TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart1;
-
 /*End system values*/
 
 /*User values*/
@@ -32,9 +30,9 @@ DataMpu6050 MPU6050data;
 bool dmpReady = false;
 uint16_t packetSize;
 
-Quaternion_t q; 
+Quaternion_t q;
 VectorFloat_t gravity;
-float ypr[3]; 
+float ypr[3];
 
 float Yaw,Pitch,Roll;
 volatile bool mpuInterrupt = false;// indicates whether MPU interrupt pin has gone high
@@ -43,19 +41,21 @@ uint16_t fifoCount;
 uint8_t fifoBuffer[64];
 uint8_t buff_char[50];
 uint8_t k=0;
+// Moto values
+int pwm = 0;
 /*End user values*/
 
 /*System functions*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM2_Init(void);
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /*End System functions*/
 
 /*User functions*/
 void dmpDataReady(void);
 void SentPlotData(void);
-
-
 /*End user functions*/
 
 
@@ -64,10 +64,13 @@ void SentPlotData(void);
 /***************************/
 int main(void)
 {
+  // system Init
   HAL_Init();
   SystemClock_Config();
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  MX_TIM2_Init();
+  //MPU6050 Init
   MPU6050_Initialize(NT_MPU6050_Device_AD0_LOW,NT_MPU6050_Accelerometer_2G,NT_MPU6050_Gyroscope_2000s);
   MPU6050address(0xD0);
   MPU6050_initialize();
@@ -84,41 +87,55 @@ int main(void)
     dmpReady = true;
     packetSize = MPU6050_dmpGetFIFOPacketSize();
   }
-  while(1)
+  // Set up moto pin
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
+  // enable in EN
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+  // End of set up moto pin
+  while (1)
   {
-  while (!mpuInterrupt && fifoCount <= packetSize){};
+    while (!mpuInterrupt && fifoCount <= packetSize){};
     mpuInterrupt = false;
     mpuIntStatus = MPU6050_getIntStatus();
     fifoCount = MPU6050_getFIFOCount();
-    if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
-        // reset so we can continue cleanly
-        MPU6050_resetFIFO();
-        }else if (mpuIntStatus & 0x02) {
-        // wait for correct available data length, should be a VERY short wait
-        while (fifoCount < packetSize) fifoCount = MPU6050_getFIFOCount();
-
-        // read a packet from FIFO
-        MPU6050_getFIFOBytes(fifoBuffer, packetSize);
-        
-        // track FIFO count here in case there is > 1 packet available
-        // (this lets us immediately read more without waiting for an interrupt)
-        fifoCount -= packetSize;
-        
-        MPU6050_dmpGetQuaternion(&q, fifoBuffer);
-        MPU6050_dmpGetGravity(&gravity, &q);
-        MPU6050_dmpGetYawPitchRoll(ypr, &q, &gravity);
-        Yaw=ypr[0]*180/3.14;
-        Pitch=ypr[1]*180/3.14;
-        Roll=ypr[2]*180/3.14;
-        k++;
-        if(k==10)
-          {k=0;
-          sprintf((char*)buff_char,"Yaw:%0.5f\t Pitch:%0.5f\t Roll:%0.5f\r\n",Yaw,Pitch,Roll);
-          //SentPlotData();
-          HAL_UART_Transmit(&huart1,buff_char,sizeof(buff_char),100);
-          }
-        }
+    if ((mpuIntStatus & 0x10) || fifoCount == 1024){
+      // reset so we can continue cleanly
+      MPU6050_resetFIFO();
     }
+    else if (mpuIntStatus & 0x02){
+      // wait for correct available data length, should be a VERY short wait
+      while (fifoCount < packetSize) fifoCount = MPU6050_getFIFOCount();
+
+      // read a packet from FIFO
+      MPU6050_getFIFOBytes(fifoBuffer, packetSize);
+
+      // track FIFO count here in case there is > 1 packet available
+      // (this lets us immediately read more without waiting for an interrupt)
+      fifoCount -= packetSize;
+
+      MPU6050_dmpGetQuaternion(&q, fifoBuffer);
+      MPU6050_dmpGetGravity(&gravity, &q);
+      MPU6050_dmpGetYawPitchRoll(ypr, &q, &gravity);
+      Yaw=ypr[0]*180/3.14;
+      Pitch=ypr[1]*180/3.14;
+      Roll=ypr[2]*180/3.14;
+      //Run moto
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pwm);
+      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, pwm);
+      if (pwm++ > 200) pwm = 0;
+      k++;
+      if(k==10){
+        k=0;
+        sprintf((char*)buff_char,"%0.5f\t Pitch:%0.5f\t Roll:%0.5f\r\n",Yaw,Pitch,Roll);
+        //SentPlotData();
+        HAL_UART_Transmit(&huart1,buff_char,sizeof(buff_char),100);
+      }
+    }
+  }
 }
 
 
@@ -175,6 +192,61 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
+/* TIM2 init function */
+static void MX_TIM2_Init(void)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+  TIM_OC_InitTypeDef sConfigOC;
+
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 24;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 200;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  HAL_TIM_MspPostInit(&htim2);
+
+}
+
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
@@ -212,13 +284,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PA0 PA1 PA2 PA3 
-                           PA4 PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5;
+  /*Configure GPIO pins : PA1 PA2 PA4 PA5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_5;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
