@@ -8,7 +8,7 @@ UIBridge::~UIBridge()
 {
 }
 
-void UIBridge::ChangeScreen(QString screenId)
+void UIBridge::changeScreen(QString screenId)
 {
     emit eventChangeScreen(screenId);
 }

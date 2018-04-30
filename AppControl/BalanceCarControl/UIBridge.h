@@ -10,7 +10,7 @@ public:
     UIBridge();
     ~UIBridge();
 public:
-    Q_INVOKABLE void ChangeScreen(QString screenId);
+    Q_INVOKABLE void changeScreen(QString screenId);
     Q_INVOKABLE void Info(QString info);
 //    Q_INVOKABLE void RequestDevice(cmd, parameter);
 signals:

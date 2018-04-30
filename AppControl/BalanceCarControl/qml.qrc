@@ -26,5 +26,7 @@
         <file>pages/SettingPID.qml</file>
         <file>pages/SettingFilter.qml</file>
         <file>pages/SettingSensor.qml</file>
+        <file>png/logo.png</file>
+        <file>pages/TestData.qml</file>
     </qresource>
 </RCC>

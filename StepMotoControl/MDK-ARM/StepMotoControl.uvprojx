@@ -529,22 +529,22 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>MPU6050</GroupName>
-          <Files>
-            <File>
-              <FileName>MPU6050.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\MPU6050\MPU6050.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
           <GroupName>MotoControl</GroupName>
           <Files>
             <File>
               <FileName>MotoControl.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\MotoControl\MotoControl.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>MPU6050</GroupName>
+          <Files>
+            <File>
+              <FileName>MPU6050.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\MPU6050\MPU6050.c</FilePath>
             </File>
           </Files>
         </Group>

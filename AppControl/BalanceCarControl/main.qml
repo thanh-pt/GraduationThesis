@@ -51,7 +51,7 @@ Item {
         IconButton{
             width: height; height: parent.height
             sourceImg: "qrc:/png/menu.png"
-            mouseAreaAlias.onClicked: UIBridge.ChangeScreen("qrc:/pages/Menu.qml")
+            mouseAreaAlias.onClicked: UIBridge.changeScreen("qrc:/pages/Menu.qml")
         }
         Text {
             id: top_bar_string
@@ -68,7 +68,7 @@ Item {
 
     Keys.onReleased: {
         if (event.key == Qt.Key_Back){
-            UIBridge.ChangeScreen(mainloader.item.previousScreen)
+            UIBridge.changeScreen(mainloader.item.previousScreen)
             event.accepted = true
         }
     }

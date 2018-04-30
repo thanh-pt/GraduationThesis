@@ -50,7 +50,7 @@ Item {
                 onPressed: img.colorImg = "#ffb142"
                 onReleased: img.colorImg = "black"
                 onCanceled: img.colorImg = "black"
-                onClicked: UIBridge.ChangeScreen(previousScreen)
+                onClicked: UIBridge.changeScreen(previousScreen)
             }
         }
         Item {

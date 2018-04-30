@@ -20,7 +20,7 @@ Item {
             width: root.width; height: root.height/10
             textName: model.name
             sourceImg: model.icon
-            mouseAreaAlias.onClicked: UIBridge.ChangeScreen(model.source)
+            mouseAreaAlias.onClicked: UIBridge.changeScreen(model.source)
         }
     }
 }
