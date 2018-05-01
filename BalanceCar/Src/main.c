@@ -40,9 +40,35 @@ volatile bool mpuInterrupt = false;// indicates whether MPU interrupt pin has go
 uint16_t fifoCount;
 uint8_t fifoBuffer[64];
 uint8_t buff_char[50];
-uint8_t k=0;
 // Moto values
 int pwm = 0;
+// Wait value
+bool is_good_angle = false;
+bool is_run = false;
+float temp_pitch = 0;
+float m_angle = 0;
+uint8_t count_good = 0;
+
+
+// PID controler value
+double e = 0;
+double integral = 0;
+double error_prior = 0;
+double iteration_time = 0.001;
+double derivative = 0;
+double output = 0;
+float PID_bias = 0;
+// PID value 6_30_0.2
+double KP = 25;
+double KI = 0;
+double KD = 0;
+
+// Bluetooth values
+uint8_t bufferData[10] = "";
+uint8_t dataIndex = 0;
+uint8_t receiveData = 0;
+uint8_t dir = 0;
+
 /*End user values*/
 
 /*System functions*/
@@ -55,7 +81,10 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /*User functions*/
 void dmpDataReady(void);
+void motoControl(double);
 void SentPlotData(void);
+void beep(int n);
+void blink(int n);
 /*End user functions*/
 
 
@@ -70,7 +99,20 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_TIM2_Init();
-  //MPU6050 Init
+  beep(3);
+
+  /* UART (bluetooth) Init*/
+  HAL_UART_Receive_IT(&huart1,&receiveData,1);
+  
+  /*DC Moto Init*/
+  // Set up moto pin
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
+  // enable in EN
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+
+  /*MPU6050 Init*/
   MPU6050_Initialize(NT_MPU6050_Device_AD0_LOW,NT_MPU6050_Accelerometer_2G,NT_MPU6050_Gyroscope_2000s);
   MPU6050address(0xD0);
   MPU6050_initialize();
@@ -87,13 +129,7 @@ int main(void)
     dmpReady = true;
     packetSize = MPU6050_dmpGetFIFOPacketSize();
   }
-  // Set up moto pin
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
-  // enable in EN
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-  // End of set up moto pin
+  /*loop system*/
   while (1)
   {
     while (!mpuInterrupt && fifoCount <= packetSize){};
@@ -121,22 +157,126 @@ int main(void)
       Yaw=ypr[0]*180/3.14;
       Pitch=ypr[1]*180/3.14;
       Roll=ypr[2]*180/3.14;
-      //Run moto
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
-      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pwm);
-      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, pwm);
-      if (pwm++ > 200) pwm = 0;
-      k++;
-      if(k==10){
-        k=0;
-        sprintf((char*)buff_char,"%0.5f\t Pitch:%0.5f\t Roll:%0.5f\r\n",Yaw,Pitch,Roll);
-        //SentPlotData();
-        HAL_UART_Transmit(&huart1,buff_char,sizeof(buff_char),100);
+      // Wait for good angle
+      if (!is_good_angle){
+        if (temp_pitch - Pitch < 0.01 && Pitch - temp_pitch < 0.01)
+          count_good++;
+        else{
+          temp_pitch = Pitch;
+          count_good = 0;
+        }
+        if (count_good == 100){
+          is_good_angle = true;
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+          //beep(2);
+        }
       }
+      if (is_good_angle && !is_run && Pitch < 0.01 && Pitch > -0.01){
+        is_run = true;
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+      }
+      // Calculator ouput of PID
+      if (is_run){
+        m_angle = Pitch;// - root_angle;
+        integral += (m_angle*iteration_time);
+        derivative = (m_angle - error_prior)/iteration_time;
+        output = KP*m_angle + KI*integral + KD*derivative + PID_bias;
+        error_prior = m_angle;
+        //Run moto
+        motoControl(output);
+      }
+      //send data back
+//      k++;
+//      if(k==10){
+//        k=0;
+//        sprintf((char*)buff_char,"%0.5f\t Pitch:%0.5f\t Roll:%0.5f\r\n",Yaw,Pitch,Roll);
+//        //SentPlotData();
+//        HAL_UART_Transmit(&huart1,buff_char,sizeof(buff_char),100);
+//      }
     }
   }
 }
+
+/******************/
+/* User functions */
+/******************/
+void dmpDataReady(void) {
+    mpuInterrupt = true;
+}
+
+void motoControl(double PID_out){
+  int temp = (int)PID_out;
+  if (temp > 0){
+    pwm = temp;
+    if (pwm > 255) pwm = 255;
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+  }else{
+    pwm = 255 + temp;
+    if (pwm < 0) pwm = 0;
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+  }
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pwm);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, pwm);
+}
+
+void SentPlotData(void){
+  char sentString[30];
+  sprintf(sentString,"%0.2f %0.2f %0.2f\n",Yaw,Pitch,Roll);
+  HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),500);
+}
+void blink(int n){
+  for (int i = 0; i < n; i++){
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+    HAL_Delay(50);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+    HAL_Delay(50);
+  }
+}
+void beep(int n){
+  for (int i = 0; i < n; i++){
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);
+    HAL_Delay(100);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
+    HAL_Delay(50);
+  }
+}
+//Bluetooth received data to control
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+  if (huart->Instance == huart1.Instance){
+    //Receive data
+    //Check end symbol
+      //When end symbol: Solve request
+        //Send back data such as angle, gx, ax,...
+        //Apply Setting data and send back answer OK or NOT
+    if (receiveData == '\n'){
+      /*
+      * 0 : check OK function
+      * 1 : request angle
+      */
+      switch (bufferData[0]){
+        case '0':
+          dir = 0;
+          break;
+        case '1':
+          dir = 1;
+          break;
+        case '2':
+          break;
+      }
+      SentPlotData();
+      dataIndex = 0;
+    }
+    else{
+      // Add new character to list
+      bufferData[dataIndex++] = receiveData;
+    }
+    //Allow receive data again
+    HAL_UART_Receive_IT(&huart1, &receiveData,1);
+  }
+}
+/* End user functions*/
 
 
 /***************************/
@@ -203,7 +343,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 24;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 200;
+  htim2.Init.Period = 255;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -284,42 +424,23 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PA1 PA2 PA4 PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_5;
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitTypeDef GPIO_InitStruct_B;
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+  GPIO_InitStruct_B.Pin = GPIO_PIN_12;
+  GPIO_InitStruct_B.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct_B.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct_B);
 }
+
 /***END SYSTEM FUCTIONS*****/
-
-
-
-/* User functions */
-//User function
-void dmpDataReady(void) {
-    mpuInterrupt = true;
-}
-
-void SentPlotData(void){
-  char sentString[30];
-  char tempString[20];
-  //push m_angle to stringData
-  sprintf(sentString,"%.2f",Yaw);
-  strcat(sentString," ");
-  //push gx to stringData
-  sprintf(tempString,"%.2f",Pitch);
-  strcat(sentString,tempString);
-  strcat(sentString," ");
-  //push ax to stringData
-  sprintf(tempString,"%.2f",Roll);
-  strcat(sentString,tempString);
-  strcat(sentString,"\n");
-  HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),500);
-}
-
-/* End user functions*/
 
 /**
   * @brief  This function is executed in case of error occurrence.
