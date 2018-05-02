@@ -99,7 +99,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_TIM2_Init();
-  beep(3);
+  beep(1);
 
   /* UART (bluetooth) Init*/
   HAL_UART_Receive_IT(&huart1,&receiveData,1);
@@ -167,13 +167,13 @@ int main(void)
         }
         if (count_good == 100){
           is_good_angle = true;
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
-          //beep(2);
+          //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+          beep(2);
         }
       }
       if (is_good_angle && !is_run && Pitch < 0.01 && Pitch > -0.01){
         is_run = true;
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
       }
       // Calculator ouput of PID
       if (is_run){
