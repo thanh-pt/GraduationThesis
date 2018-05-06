@@ -74,7 +74,7 @@ Item {
 
     onRawDataChanged: {
         if (rawData != ""){
-            //console.log(rawData);
+            console.log(rawData);
             x_time += 0.1;
             var Data = rawData.split(" ");
             y_angle = parseFloat(Data[0]);
@@ -90,28 +90,26 @@ Item {
         }
     }
 
-    Timer{
-        id: request_data
-        interval: 100
-        running: true
-        onTriggered: {
-            btSocket.stringData = dirControl
-        }
-    }
+//    Timer{
+//        id: request_data
+//        interval: 500
+//        running: true
+//        onTriggered: {
+//            btSocket.stringData = dirControl
+//        }
+//    }
     Item{
         width: root.width; height: root.height * 2 / 5
         anchors.bottom: root.bottom
         anchors.bottomMargin: 30
 
         CircleControl{
+            id: control
             width: parent.width * 3 / 5
             height: width
             anchors.centerIn: parent
-            MouseArea{
-                anchors.fill: parent
-                onPressed: dirControl = "1"
-                onReleased: dirControl = "0"
-                onCanceled: dirControl = "0"
+            onStateControlChanged: {
+                btSocket.stringData = stateControl
             }
         }
     }

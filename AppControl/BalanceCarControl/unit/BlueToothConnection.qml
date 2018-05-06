@@ -13,17 +13,17 @@ Item {
         onErrorChanged: {
             switch (btModel.error) {
             case BluetoothDiscoveryModel.PoweredOffError:
-                UIBridge.Info("Error: Bluetooth device not turned on");
+                UIBridge.info("Error: Bluetooth device not turned on");
                 break;
             case BluetoothDiscoveryModel.InputOutputError:
-                UIBridge.Info("Error: Bluetooth I/O Error");
+                UIBridge.info("Error: Bluetooth I/O Error");
                 break;
             case BluetoothDiscoveryModel.InvalidBluetoothAdapterError:
-                UIBridge.Info("Error: Invalid Bluetooth Adapter Error"); break;
+                UIBridge.info("Error: Invalid Bluetooth Adapter Error"); break;
             case BluetoothDiscoveryModel.NoError:
                 break;
             default:
-                UIBridge.Info("Error: Unknown Error"); break;
+                UIBridge.info("Error: Unknown Error"); break;
             }
         }
     }
@@ -38,7 +38,7 @@ Item {
                     break;
                 case BluetoothSocket.Connected:
                     console.log("Connected to server");
-                    UIBridge.Info("Connected to server.")
+                    UIBridge.info("Connected to server.")
                     break;
                 case BluetoothSocket.Connecting:
                 case BluetoothSocket.ServiceLookup:

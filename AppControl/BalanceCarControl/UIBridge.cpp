@@ -13,7 +13,7 @@ void UIBridge::changeScreen(QString screenId)
     emit eventChangeScreen(screenId);
 }
 
-void UIBridge::Info(QString info)
+void UIBridge::info(QString info)
 {
     emit eventInfo(info);
 }

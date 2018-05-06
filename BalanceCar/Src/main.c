@@ -59,15 +59,23 @@ double derivative = 0;
 double output = 0;
 float PID_bias = 0;
 // PID value 6_30_0.2
-double KP = 25;
-double KI = 0;
+double KP = 23;
+double KI = 1;
 double KD = 0;
+// new pid
+const float Kp = 26;
+const float Ki = 0;
+const float Kd = 1;
+float pTerm, iTerm, dTerm, integrated_error, last_error, error;
+const float K = 1;//1.9*1.12;
+#define GUARD_GAIN 10.0
 
 // Bluetooth values
 uint8_t bufferData[10] = "";
 uint8_t dataIndex = 0;
 uint8_t receiveData = 0;
 uint8_t dir = 0;
+bool is_sent = false;
 
 /*End user values*/
 
@@ -85,6 +93,12 @@ void motoControl(double);
 void SentPlotData(void);
 void beep(int n);
 void blink(int n);
+//new pid
+float constrain(float x, float a, float b);
+void pid_calculator(void);
+void RunMoto(void);
+void StopMoto(void);
+int speed;
 /*End user functions*/
 
 
@@ -129,7 +143,9 @@ int main(void)
     dmpReady = true;
     packetSize = MPU6050_dmpGetFIFOPacketSize();
   }
-  /*loop system*/
+  /*********************/
+  /****loop system******/
+  /*********************/
   while (1)
   {
     while (!mpuInterrupt && fifoCount <= packetSize){};
@@ -158,34 +174,65 @@ int main(void)
       Pitch=ypr[1]*180/3.14;
       Roll=ypr[2]*180/3.14;
       // Wait for good angle
-      if (!is_good_angle){
-        if (temp_pitch - Pitch < 0.01 && Pitch - temp_pitch < 0.01)
-          count_good++;
-        else{
-          temp_pitch = Pitch;
-          count_good = 0;
+      if (!is_run){
+        if (!is_good_angle){
+          if (temp_pitch - Pitch < 0.01 && Pitch - temp_pitch < 0.01)
+            count_good++;
+          else{
+            temp_pitch = Pitch;
+            count_good = 0;
+          }
+          if (count_good == 100){
+            is_good_angle = true;
+            //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+            beep(2);
+          }
         }
-        if (count_good == 100){
-          is_good_angle = true;
-          //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
-          beep(2);
+        else if (Pitch < 0.1 && Pitch > -0.1){
+          is_run = true;
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
         }
-      }
-      if (is_good_angle && !is_run && Pitch < 0.01 && Pitch > -0.01){
-        is_run = true;
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
       }
       // Calculator ouput of PID
       if (is_run){
-        m_angle = Pitch;// - root_angle;
-        integral += (m_angle*iteration_time);
-        derivative = (m_angle - error_prior)/iteration_time;
-        output = KP*m_angle + KI*integral + KD*derivative + PID_bias;
-        error_prior = m_angle;
-        //Run moto
-        motoControl(output);
+//        m_angle = Pitch + (Pitch > 0 ? 1 : -1);// - root_angle;
+//        // test control
+//        switch (dir){
+//          case 0:
+//          //using default angle
+//          break;
+//          case 1:
+//          m_angle += 5;
+//          break;
+//          case 2:
+//          m_angle -= 5;
+//          break;
+//        }
+//        // end test control
+//        integral += (m_angle*iteration_time);
+//        derivative = (m_angle - error_prior)/iteration_time;
+//        output = KP*m_angle + KI*integral + KD*derivative + PID_bias;
+//        error_prior = m_angle;
+//        //Run moto
+//        motoControl(output);
+        /*test new pid*/
+        if (Pitch < 0.5 && Pitch > -0.5){
+          StopMoto();
+        }
+        else{
+          if (Pitch > -50 && Pitch < 50){
+            pid_calculator();
+            RunMoto();
+          }
+          else
+            StopMoto();
+        }
       }
       //send data back
+      if (is_sent) {
+        //SentPlotData();
+        is_sent = false;
+      }
 //      k++;
 //      if(k==10){
 //        k=0;
@@ -200,31 +247,92 @@ int main(void)
 /******************/
 /* User functions */
 /******************/
+
 void dmpDataReady(void) {
     mpuInterrupt = true;
 }
 
+// Moto control
 void motoControl(double PID_out){
   int temp = (int)PID_out;
-  if (temp > 0){
-    pwm = temp;
-    if (pwm > 255) pwm = 255;
+  float angle_offset = 5;
+  // set up direction for car
+  if (m_angle > 0){
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
-  }else{
-    pwm = 255 + temp;
-    if (pwm < 0) pwm = 0;
+  }
+  else {
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
   }
+  // calculator pwm
+  if (m_angle > angle_offset){
+    pwm = temp;
+  }
+  else if (m_angle < -angle_offset){
+    pwm = 255 + temp;
+  }
+  else if (m_angle > 0){
+    pwm = temp * 3/ 4;
+  }
+  else {
+    pwm = 255 + temp * 3/ 4;
+  }
+  // fix if over range
+  if (pwm < 0) pwm = 0;
+  if (pwm > 255) pwm = 255;
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pwm);
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, pwm);
+}
+
+void pid_calculator(void){
+  float CurrentAngle = Pitch;
+  error = CurrentAngle;
+  pTerm = Kp * error;
+  integrated_error += error*0.01;
+  iTerm = Ki*constrain(integrated_error, -GUARD_GAIN, GUARD_GAIN);
+  dTerm = Kd*(error - last_error);
+  last_error = error;
+  speed = constrain(K*(pTerm + iTerm + dTerm), -255, 255);
+}
+float constrain(float x, float a, float b){
+  if (x <= a) return a;
+  if (x >= b) return b;
+  return x;
+}
+
+void RunMoto(void){
+  if (speed > 0){
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+  }
+  else {
+    speed = 255 + speed;
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+  }
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, speed);
+}
+void StopMoto(void){
+  if (speed > 0){
+    speed = speed + 105;
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+  }
+  else {
+    speed = 150 + speed;
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+  }
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, speed);
 }
 
 void SentPlotData(void){
   char sentString[30];
   sprintf(sentString,"%0.2f %0.2f %0.2f\n",Yaw,Pitch,Roll);
-  HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),500);
+  HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),20);
 }
 void blink(int n){
   for (int i = 0; i < n; i++){
@@ -261,11 +369,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
           break;
         case '1':
           dir = 1;
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
           break;
         case '2':
+          dir = 2;
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
           break;
       }
-      SentPlotData();
+      is_sent = true;
       dataIndex = 0;
     }
     else{
@@ -392,7 +503,7 @@ static void MX_USART1_UART_Init(void)
 {
 
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;

@@ -3,6 +3,7 @@ import QtQuick 2.0
 Item {
     id: root
     property int radius: height/2
+    property int stateControl
     Rectangle {
         id: circle
         width: 2 * radius
@@ -47,5 +48,10 @@ Item {
         readonly property real dragRadius: Math.sqrt(Math.pow(x - root.radius, 2) + Math.pow(y - root.radius, 2))
         x: root.radius
         y: root.radius
+        onYChanged: {
+            if (y < 100) stateControl = 1
+            else if (y > 300) stateControl = 2
+            else stateControl = 0
+        }
     }
 }
