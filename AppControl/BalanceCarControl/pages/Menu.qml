@@ -16,7 +16,7 @@ Item {
         id: grid_view
         anchors.fill: parent
         cellWidth: root.width/3
-        cellHeight: root.width/4
+        cellHeight: root.width/3
         model: list_model
         delegate: GridViewDelegate{
             width: root.width/3; height: root.height/5

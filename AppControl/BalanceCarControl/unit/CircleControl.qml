@@ -53,5 +53,10 @@ Item {
             else if (y > 300) stateControl = 2
             else stateControl = 0
         }
+        onXChanged: {
+            if (x < 60) stateControl = 4
+            else if (x > 360) stateControl = 3
+            else stateControl = 0
+        }
     }
 }

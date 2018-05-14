@@ -64,7 +64,7 @@ double KI = 1;
 double KD = 0;
 // new pid
 const float Kp = 26;
-const float Ki = 0;
+const float Ki = 0.2;
 const float Kd = 1;
 float pTerm, iTerm, dTerm, integrated_error, last_error, error;
 const float K = 1;//1.9*1.12;
@@ -75,7 +75,8 @@ uint8_t bufferData[10] = "";
 uint8_t dataIndex = 0;
 uint8_t receiveData = 0;
 uint8_t dir = 0;
-bool is_sent = false;
+bool is_sent = false;  
+float ControlAngle = 0;
 
 /*End user values*/
 
@@ -195,27 +196,6 @@ int main(void)
       }
       // Calculator ouput of PID
       if (is_run){
-//        m_angle = Pitch + (Pitch > 0 ? 1 : -1);// - root_angle;
-//        // test control
-//        switch (dir){
-//          case 0:
-//          //using default angle
-//          break;
-//          case 1:
-//          m_angle += 5;
-//          break;
-//          case 2:
-//          m_angle -= 5;
-//          break;
-//        }
-//        // end test control
-//        integral += (m_angle*iteration_time);
-//        derivative = (m_angle - error_prior)/iteration_time;
-//        output = KP*m_angle + KI*integral + KD*derivative + PID_bias;
-//        error_prior = m_angle;
-//        //Run moto
-//        motoControl(output);
-        /*test new pid*/
         if (Pitch < 0.5 && Pitch > -0.5){
           StopMoto();
         }
@@ -227,19 +207,13 @@ int main(void)
           else
             StopMoto();
         }
+        if (ControlAngle == -3 || ControlAngle == 3) ControlAngle = 0;
       }
       //send data back
       if (is_sent) {
-        //SentPlotData();
+        SentPlotData();
         is_sent = false;
       }
-//      k++;
-//      if(k==10){
-//        k=0;
-//        sprintf((char*)buff_char,"%0.5f\t Pitch:%0.5f\t Roll:%0.5f\r\n",Yaw,Pitch,Roll);
-//        //SentPlotData();
-//        HAL_UART_Transmit(&huart1,buff_char,sizeof(buff_char),100);
-//      }
     }
   }
 }
@@ -286,7 +260,7 @@ void motoControl(double PID_out){
 }
 
 void pid_calculator(void){
-  float CurrentAngle = Pitch;
+  float CurrentAngle = Pitch + ControlAngle;
   error = CurrentAngle;
   pTerm = Kp * error;
   integrated_error += error*0.01;
@@ -303,13 +277,31 @@ float constrain(float x, float a, float b){
 
 void RunMoto(void){
   if (speed > 0){
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+    if (dir == 3){
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+    }
+    else if (dir == 4){
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+    }else {
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+    }
   }
   else {
     speed = 255 + speed;
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+    if (dir == 3){
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+    }
+    else if (dir == 4){
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+    }else {
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+    }
   }
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed);
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, speed);
@@ -332,7 +324,7 @@ void StopMoto(void){
 void SentPlotData(void){
   char sentString[30];
   sprintf(sentString,"%0.2f %0.2f %0.2f\n",Yaw,Pitch,Roll);
-  HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),20);
+  HAL_UART_Transmit(&huart1,(uint8_t*)sentString,strlen(sentString),100);
 }
 void blink(int n){
   for (int i = 0; i < n; i++){
@@ -364,19 +356,36 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
       * 1 : request angle
       */
       switch (bufferData[0]){
+        //Stop
         case '0':
+          if (dir == 1)
+            ControlAngle = -3;
+          if (dir == 2) ControlAngle = 3;
           dir = 0;
           break;
+        //Go up
         case '1':
           dir = 1;
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+          ControlAngle = 4;
           break;
+        //Back down
         case '2':
           dir = 2;
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+          ControlAngle = -4;
+          break;
+        //Turn left
+        case '3':
+          dir = 3;
+          break;
+        //Turn right
+        case '4':
+          dir = 4;
+          break;
+        //request sent 
+        case '5':
+          is_sent = true;
           break;
       }
-      is_sent = true;
       dataIndex = 0;
     }
     else{
